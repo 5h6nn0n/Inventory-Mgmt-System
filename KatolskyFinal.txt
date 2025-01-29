@@ -1,0 +1,212 @@
+/*
+	Author: Shannon Katolsky
+	Date: 11/30
+	File: Final Project for CMIS 3200
+*/
+
+SET SERVEROUTPUT ON;
+SET LINESIZE 800;
+
+/******** Part ii: 1. Reporting procedure FN24_ORDER_RPT *******/
+
+-- create reporting procedure 
+CREATE OR REPLACE PROCEDURE FN24_ORDER_RPT
+AS
+	-- declare variables with set values
+	title 			varchar2(70) := 'Pastries By Sunnee';
+	header			varchar2(70) := 'Pastry Order Report as of: ';
+	footer			varchar2(70) := 'The End!';
+	divider			varchar2(70) := '==========';
+	current_date	date 		 := sysdate;
+	-- declare names of column headers 
+	column1 		varchar2(50) := 'Pastry Code';
+	column2 		varchar2(50) := 'Pastry Description';
+	column3 		varchar2(50) := 'Qty Sold';
+    column4 		varchar2(50) := 'Qty on Hand';
+    banner 			varchar2(255); -- stores the column names
+	-- declare to store formatted variables
+    date_formatted  varchar2(70);
+	divider_format  varchar(255);
+    header_format   varchar(255);
+	title_format    varchar(255);
+	output_message  varchar(255);
+	-- declare for referenced attributes 
+	pcode			number(25);
+	pname			CHAR(30);
+	psold 			number(25);
+	phand			number(25);
+	
+-- create a cursor to query values from tables
+CURSOR query_cursor IS 
+    
+SELECT 
+    p.pastry_code "Pastry Code", 
+    p.pastry_name "Pastry Description",
+    sum(l.quantity_ordered) "Qty Sold", 
+    p.pastry_qty_on_hand "Qty on Hand"
+FROM 
+	fn24_order_line l, 
+	fn24_pastry p
+WHERE 
+	l.pastry_code = p.pastry_code
+GROUP BY 
+	p.pastry_code, 
+	p.pastry_name, 
+	p.pastry_qty_on_hand
+ORDER BY 
+	p.pastry_code;
+
+query_row	query_cursor%ROWTYPE;
+
+BEGIN
+	-- store formatted variables
+	date_formatted := to_char(current_date, 'fmDay, Mon dd, yyyy');
+	title_format := (chr(9) || chr(9) || chr(9) || chr(9) || chr(9) || chr(9) || title);
+    header_format := (chr(9) || chr(9) || chr(9) || header || date_formatted);
+    divider_format := (divider || '   ' || divider || divider || divider || divider || '   ' || divider || '   ' || divider);
+    banner := (column1 || chr(9) || chr(9) || chr(9) || chr(9) || column2 || chr(9) || chr(9) || chr(9) || chr(9) || column3 || chr(9) || column4);
+	
+	-- opening output 1/3
+	DBMS_OUTPUT.PUT_LINE(title_format);
+	DBMS_OUTPUT.PUT_LINE(header_format);
+    DBMS_OUTPUT.PUT_LINE(chr(9));
+    DBMS_OUTPUT.PUT_LINE(banner);
+    DBMS_OUTPUT.PUT_LINE(divider_format);
+    
+	-- reference the cursor to access values 
+	OPEN query_cursor;
+		LOOP
+			FETCH
+				query_cursor
+			INTO
+				pcode,
+				pname,
+				psold,
+				phand;
+			EXIT WHEN query_cursor%NOTFOUND;
+			
+	-- body output 2/3 
+	output_message := (chr(9) || pcode || chr(9) || chr(9) ||  chr(9) || pname ||  chr(9) ||  chr(9) || chr(9) || chr(9) ||  psold || chr(9) ||   chr(9) || chr(9) || phand);
+	DBMS_OUTPUT.PUT_LINE(output_message);
+	
+    END LOOP;
+	CLOSE query_cursor;
+	
+	-- closing output 3/3
+	DBMS_OUTPUT.PUT_LINE(chr(9));
+	DBMS_OUTPUT.PUT_LINE(divider_format);
+	DBMS_OUTPUT.PUT_LINE(chr(9));
+    DBMS_OUTPUT.PUT_LINE(footer);	
+END;
+/
+
+/******** Part ii: 2. Execute reporting procedure *******/
+
+-- views the report procedure 
+execute FN24_ORDER_RPT; 
+
+-- for troubleshooting purposes
+-- show errors; 
+
+
+/******** Part iii: 1. Sequence named FN24_ORDERLINE_SEQ *******/
+
+-- so it can be re-run
+DROP SEQUENCE FN24_ORDERLINE_SEQ; 
+
+CREATE SEQUENCE FN24_ORDERLINE_SEQ
+START WITH 10
+INCREMENT BY 1
+NOCYCLE
+NOCACHE;
+
+/******** Part iii: 2. Procedure named FN24_OL_IST_PROC *******/
+
+-- to insert order lines
+CREATE OR REPLACE PROCEDURE FN24_OL_IST_PROC
+(
+	ORDER_NUM 			IN NUMBER,
+	PASTRY_CODE 		IN NUMBER,
+	QUANTITY_ORDERED 	IN NUMBER
+)
+AS
+BEGIN 
+	INSERT INTO FN24_ORDER_LINE
+		(ORDER_LINE_NUM, ORDER_NUM, PASTRY_CODE, QUANTITY_ORDERED)
+	VALUES
+		(FN24_ORDERLINE_SEQ.NEXTVAL, ORDER_NUM, PASTRY_CODE, QUANTITY_ORDERED);
+END FN24_OL_IST_PROC;
+/
+
+/******** Part iii: 5. Execute & select the procedure *******/
+
+-- insert 10 glazed donuts to order #10010
+EXEC FN24_OL_IST_PROC(10010, 750, 10);
+
+-- verifies the values
+SELECT * 
+FROM FN24_ORDER_LINE
+WHERE ORDER_NUM = 10010; 
+
+-- removes above query
+DELETE FROM FN24_ORDER_LINE
+WHERE ORDER_NUM = 10010
+AND PASTRY_CODE = 750;
+
+
+/******** Part iv: 1. Trigger named FN24_PASTRY_QTY_UPD_TRIG *******/
+
+-- updates the quantity sold and the quantity on hand 
+
+CREATE OR REPLACE TRIGGER FN24_PASTRY_QTY_UPD_TRIG
+AFTER INSERT ON FN24_ORDER_LINE
+FOR EACH ROW
+	BEGIN
+		UPDATE FN24_PASTRY
+			SET PASTRY_QTY_ON_HAND = PASTRY_QTY_ON_HAND - :NEW.QUANTITY_ORDERED
+		WHERE FN24_PASTRY.PASTRY_CODE = :NEW.PASTRY_CODE;
+END;
+/
+
+
+/******** Part iv: 2. ececute statements to test trigger *******/
+
+-- statement #1 -- 1500 signature berry pies
+EXEC FN24_OL_IST_PROC(10010, 700, 1500);
+
+-- statement #2 -- 1500 signature berry pies spec
+EXEC FN24_OL_IST_PROC(10010, 702, 1500);
+
+-- statement #3 -- 1500 brownies
+EXEC FN24_OL_IST_PROC(10010, 710, 1500);
+
+-- statement #4 -- 1500 sunnee's smiley cookies
+EXEC FN24_OL_IST_PROC(10010, 720, 1500);
+
+-- statement #5 -- 1500 sinful cinnamon buns
+EXEC FN24_OL_IST_PROC(10010, 732, 1500);
+
+-- statement #6 -- 1500 sinful cinnamon buns
+EXEC FN24_OL_IST_PROC(10010, 735, 1500);
+
+-- statement #7 -- 1500 snickerdoodle cookies
+EXEC FN24_OL_IST_PROC(10010, 740, 1500);
+
+-- statement #8 -- 1500 glazed donuts 
+EXEC FN24_OL_IST_PROC(10010, 750, 1500);
+
+-- statement #9 -- 5500 glazed donuts 
+EXEC FN24_OL_IST_PROC(10010, 750, 5500);
+
+-- statement #10 -- (-4500) brownies 
+EXEC FN24_OL_IST_PROC(10010, 710, -4500);
+
+-- verifies the order lines 
+SELECT * 
+FROM FN24_ORDER_LINE
+WHERE ORDER_NUM = 10010; 
+
+-- views the report procedure 
+execute FN24_ORDER_RPT;
+
+
