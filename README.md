@@ -1,7 +1,7 @@
-# database-programming
+# Inventory Mangement System 
 
 The final project I created for CMIS 3200 that integrates practical knowledge of triggers and procedures to update inventory automatically. 
-This project is an inventory management system for a small bakery business that updates the quantity sold and the quantity on hand.  
+This inventory management system, for a small bakery business, automatically updates the quantity sold and the quantity on hand.  
 
 ----
 
