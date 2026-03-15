@@ -1,7 +1,8 @@
 # Inventory Mangement System 
 
 The final project I created for CMIS 3200 that integrates practical knowledge of triggers and procedures to update inventory automatically. 
-This inventory management system updates the quantity sold and the quantity on hand for a small bakery business.  
+This inventory management system updates the quantity sold and the quantity on hand for a small bakery business. Ready to paste into Oracle 
+SQL Developer. Set-up Instructions: 1) open a connection in SQL Developer 2) run the setup-code first 3) paste the database-programming script.
 
 ----
 
