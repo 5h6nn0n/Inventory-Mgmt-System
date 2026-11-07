@@ -3,7 +3,7 @@
 <b> Tech stack: PL/SQL, Oracle SQL Developer, database programming, scripting  </b>
 
 <p>
-PL/SQL project that integrates practical knowledge of triggers, procedures, and cursors to update inventory automatically. This inventory management system updates the quantity sold and the quantity on hand for a small bakery business.  Cursors are used to parse through the inventory data. Stored procedure hold the instructions for action. The trigger is how the action is launched. Ready to paste into Oracle SQL Developer. Created in 2024. 
+PL/SQL project that integrates practical knowledge of triggers, procedures, and cursors to update inventory automatically. This inventory management system updates the quantity sold and the quantity on hand for a small bakery business.  Cursors are used to parse through the inventory data. Stored procedure hold the instructions for action. The trigger is how the action is launched. Ready to paste into Oracle SQL Developer.  
 </p>
 
 <b> Set-up Instructions: </b>
